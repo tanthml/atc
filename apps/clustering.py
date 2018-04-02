@@ -7,11 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib as mpl
 from sklearn.cluster import DBSCAN
-from geopy.distance import great_circle
-from shapely.geometry import MultiPoint
-from sklearn.datasets.samples_generator import make_blobs
 
-from utils import gen_log_file, build_coordinator_dict, \
+from lib.utils import gen_log_file, build_coordinator_dict, \
     flight_id_encoder, build_matrix_distances
 logger = gen_log_file(path_to_file='tmp/clustering.log')
 
@@ -145,8 +142,8 @@ def main(input_path, airport_code):
                 alpha=0.8,
                 color=colors[labels[index]],
             )
-        plt.savefig("tmp/cluster_{}_{}.png".format(
-            len(clusters), strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")))
+        history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
+        plt.savefig("tmp/cluster_{}.png".format(len(clusters)))
         if len(clusters) == 2:
             break
 

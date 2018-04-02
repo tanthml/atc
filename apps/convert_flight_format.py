@@ -4,7 +4,7 @@ from copy import deepcopy
 import click
 import pandas as pd
 
-from utils import gen_log_file
+from lib.utils import gen_log_file
 logger = gen_log_file(path_to_file='tmp/convert_flight_format.log')
 
 
