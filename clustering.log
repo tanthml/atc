@@ -1,2 +1,0 @@
-2018-03-18 11:40:01,453 - __main__ - INFO - Processing /home/tanthm/jvn_data/NTU/tracks_2015_06.json
-2018-03-18 11:44:55,088 - __main__ - INFO - {'Origin': u'RKSI', 'Destination': u'RPLL', 'Ident': u'AAR701', 'Time_(UTC)': u'06/01/2015 00:40:00', 'Flight_ID': u'AAR701-1433107088-airline-0077', 'TRemains': 205.0, 'TTravelled': 0.0, 'Longitude': 126.450517, 'Altitude_(ft)': nan, 'Rate': nan, 'Actual_Arrival_Time_(UTC)': u'2015-06-01 04:05', 'Latitude': 37.469075, 'DRemains': 23.591167214808216}

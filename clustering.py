@@ -1,5 +1,6 @@
-import math
+from time import gmtime, strftime
 
+import click
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,13 +14,6 @@ from sklearn.datasets.samples_generator import make_blobs
 from utils import gen_log_file, build_coordinator_dict, \
     flight_id_encoder, build_matrix_distances
 logger = gen_log_file(path_to_file='tmp/clustering.log')
-
-# data_path = "/home/tan/Dropbox/master_thesis/air-traffic/data/sample_feature_comma.csv"
-data_path = "~/jvn_data/NTU/tracks_2015_06_01-001.csv"
-
-param_grid = [
-  {'epsilon': [1, 0.5], 'min_samples': [1,2,3,4,5,6,7,8,9,10]},
- ]
 
 
 def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
@@ -54,21 +48,31 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
     return clusters, labels
 
 
-def main():
-    df = pd.read_csv(data_path)
+@click.command()
+@click.option(
+    '--input_path',
+    type=str,
+    required=True,
+    help='Full path to the trajectory file in CSV format')
+@click.option(
+    '--airport_code',
+    type=str,
+    default='WSSS',
+    help='Air Port Codename')
+def main(input_path, airport_code):
+    df = pd.read_csv(input_path)
     print(df.head())
 
     departure_airports = df['Origin'].unique()
     destination_airports = df['Destination'].unique()
     plt.figure(figsize=(20, 10))
 
-    one_airport = df[(df['Destination'] == 'WSSS')]
+    one_airport = df[(df['Destination'] == airport_code)]
     # plt.scatter(one_airport['Lat'], one_airport['Lon'], alpha=0.5)
     # plt.show()
 
     # get fixed
     flights_toward_airport = one_airport[(one_airport['DRemains'] < 1.0) & (one_airport['DRemains'] > 0.01)]
-    # flights_toward_airport = one_airport[(one_airport['DRemains'] > 0.1)]
     plt.scatter(flights_toward_airport['Latitude'], flights_toward_airport['Longitude'], alpha=0.5)
     plt.show()
 
@@ -141,7 +145,8 @@ def main():
                 alpha=0.8,
                 color=colors[labels[index]],
             )
-        plt.show()
+        plt.savefig("tmp/cluster_{}_{}.png".format(
+            len(clusters), strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")))
         if len(clusters) == 2:
             break
 
