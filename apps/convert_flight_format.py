@@ -5,7 +5,7 @@ import click
 import csv
 import pandas as pd
 
-from lib.utils import gen_log_file
+from lib.common_utils import gen_log_file
 logger = gen_log_file(path_to_file='tmp/convert_flight_format.log')
 
 
