@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import directed_hausdorff
+import traj_dist.distance as tdist
+
 
 from sklearn import preprocessing
 
@@ -49,45 +51,51 @@ def build_coordinator_dict(df, label_encoder, flight_ids, max_flights=1000):
     return flight_idx, coord_list, flight_dicts
 
 
-def compute_distance_between_curves(u, v):
+def compute_distance_between_curves(u, v, algo='directed_hausdorff'):
     """
     Compute distance of 2 curve u, v
     Args:
-        u (list[]):
-        v (list[]):
+        u (list[(float,float)]): list of Lat, Lon first curve
+        v (list[(float,float)]): list of Lat, Lon second curve
+        algo (str): name of algorithm
 
     Returns:
 
     """
-    """ compute symmetric Hausdorff distances of curves """
-    # D = scipy.spatial.distance.cdist(u, v, 'euclidean')
-    # None symmetric Hausdorff distances
-    # H1 = np.max(np.min(D, axis=1))
-    # H2 = np.max(np.min(D, axis=0))
-    # return (H1 + H2) / 2.
-
-    # Find the general (symmetric) Hausdorff distance between two 2-D arrays of coordinates:
-    return max(directed_hausdorff(u, v)[0], directed_hausdorff(v, u)[0])
+    if algo == 'frechet':
+        return tdist.frechet(u, v)
+    else:
+        """ compute symmetric Hausdorff distances of curves """
+        # D = scipy.spatial.distance.cdist(u, v, 'euclidean')
+        # None symmetric Hausdorff distances
+        # H1 = np.max(np.min(D, axis=1))
+        # H2 = np.max(np.min(D, axis=0))
+        # return (H1 + H2) / 2.
+        # Find the general (symmetric) Hausdorff distance between two 2-D arrays of coordinates:
+        # return max(directed_hausdorff(u, v)[0], directed_hausdorff(v, u)[0])
+        return tdist.hausdorff(u, v)
 
 
 def build_matrix_distances(coords=[], dist_type='directed_hausdorff'):
     """
+    Construct the matrix distance between every curves (pair-wise distance)
 
     Args:
-        coords:
-        dist_type:
+        coords (list[list[(float, float)]]): list of Lat, Lon of curves
+        dist_type (str): the type of distance need to compute
 
     Returns:
+        (numpy-array): matrix distance
 
     """
-    if dist_type not in ['directed_hausdorff']:
+    if dist_type not in ['directed_hausdorff', 'frechet']:
         return False
     n_curve = len(coords)
     # compute distance matrix
     dist_matrix = np.zeros(shape=(n_curve, n_curve))
     for i in range(0, n_curve - 1):
         for j in range(i + 1, n_curve):
-            tmp = compute_distance_between_curves(coords[i], coords[j])
+            tmp = compute_distance_between_curves(coords[i], coords[j], dist_type)
             dist_matrix[i, j] = tmp
             dist_matrix[j, i] = dist_matrix[i, j]
     return dist_matrix

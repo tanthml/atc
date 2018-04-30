@@ -4,7 +4,7 @@ import os
 from io import BytesIO
 
 
-def lat_lon_plot(lat=[], lon=[], directory=None, length_cutoff=600):
+def traffic_density_plot(lat=[], lon=[], directory=None, length_cutoff=600, subfix=""):
     """
     Visualize density of geometric traffic
 
@@ -13,18 +13,16 @@ def lat_lon_plot(lat=[], lon=[], directory=None, length_cutoff=600):
         lon (list[float]):
         directory (str):
         length_cutoff (int):
+        subfix (str):
 
     Returns:
 
     """
 
-    if not os.path.exists(directory):
-      os.makedirs(directory)
-
-    xmin = min(lat)
-    xmax = max(lat)
-    ymin = min(lon)
-    ymax = max(lon)
+    xmin = min(lon)
+    xmax = max(lon)
+    ymin = min(lat)
+    ymax = max(lat)
 
     plt.figure(figsize=(20, 10))
     fig = plt.figure(frameon=False) 
@@ -35,10 +33,10 @@ def lat_lon_plot(lat=[], lon=[], directory=None, length_cutoff=600):
     ax.set_axis_off()
 
     # Set a single t value to slice the multidimensional array.
-    t=length_cutoff-100
+    length_cutoff = length_cutoff-100
     # With the above note in mind, this may be an exception??
-    x1=np.copy(lat)
-    y1=np.copy(lon)
+    x1=np.copy(lon)
+    y1=np.copy(lat)
 
     # Remove the nans from the array
     x1 = x1[~np.isnan(x1)]
@@ -66,7 +64,14 @@ def lat_lon_plot(lat=[], lon=[], directory=None, length_cutoff=600):
         return 1
     else:
         # save figure as png
-        png1 = BytesIO()
-        filename= "{}/traffic_density_{}.png".format(directory.rstrip("/"), t) 
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        # png1 = BytesIO()
+        filename= "{}/{}_traffic_density.png".format(directory.rstrip("/"), subfix)
         fig.savefig(filename, format='png', bbox_inches='tight', pad_inches=0)
         return 1
+
+def traffic_flight_plot():
+    # TODO: implement the visualization of clustering result
+    pass
