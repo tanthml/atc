@@ -1,6 +1,7 @@
 import numpy as np
-from scipy.spatial.distance import directed_hausdorff
 import traj_dist.distance as tdist
+from scipy.spatial.distance import directed_hausdorff
+from simplification.cutil import simplify_coords
 
 
 from sklearn import preprocessing
@@ -13,7 +14,7 @@ def flight_id_encoder(unique_id):
         unique_id (list[str]): list flight id
 
     Returns:
-        le (de-encoder):
+        le (LabelEncoder):
 
     """
     le = preprocessing.LabelEncoder()
@@ -21,7 +22,21 @@ def flight_id_encoder(unique_id):
     return le
 
 
-def build_coordinator_dict(df, label_encoder, flight_ids, max_flights=1000):
+def simplify_coordinator(coord_curve, epsilon=0.0001):
+    """
+
+    Args:
+        coord_curve (list[list[float, float]]): a list of lat, lon coordinates
+        epsilon (float):
+    Returns:
+        list[list[float, float]]
+    """
+    coord_curve = np.asarray(coord_curve, order='C')
+    return simplify_coords(coord_curve, epsilon)
+
+
+def build_coordinator_dict(df, label_encoder, flight_ids, max_flights=1000,
+                           is_simplify=True):
     """
 
     Args:
@@ -45,6 +60,8 @@ def build_coordinator_dict(df, label_encoder, flight_ids, max_flights=1000):
         encode_id = label_encoder.transform([fid])[0]
         flight_idx.append(encode_id)
         coords = df_min.as_matrix(columns=['Latitude', 'Longitude'])
+        if is_simplify:
+            coords = simplify_coordinator(coords)
         coord_list.append(coords)
         flight_dicts[encode_id] = coords
 
@@ -137,6 +154,7 @@ def thresholding_algo(y, lag=30, threshold=5, influence=0):
             avgFilter[i] = np.mean(filteredY[(i-lag):i])
             stdFilter[i] = np.std(filteredY[(i-lag):i])
 
-    return dict(signals = np.asarray(signals),
+    return dict(
+        signals = np.asarray(signals),
                 avgFilter = np.asarray(avgFilter),
                 stdFilter = np.asarray(stdFilter))

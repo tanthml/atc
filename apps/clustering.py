@@ -3,6 +3,9 @@ from time import gmtime, strftime
 import click
 import numpy as np
 import pandas as pd
+
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
@@ -75,10 +78,11 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
 @click.option(
     '--min_sample',
     type=int,
-    default=2,
+    default=4,
     help='Min sample value in DBSCAN')
 def main(input_path, airport_code, distance, min_sample):
     history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
+    logger.info("=============================================")
     logger.info("================ DATETIME {} ================".format(history))
     df = pd.read_csv(input_path)
     logger.info(df.head())
@@ -109,7 +113,7 @@ def main(input_path, airport_code, distance, min_sample):
         df=flights_toward_airport,
         label_encoder=flight_encoder,
         flight_ids=flight_ids,
-        max_flights=10000
+        max_flights=1000
     )
 
     # create dataframe result
@@ -149,14 +153,6 @@ def main(input_path, airport_code, distance, min_sample):
         colors = [plt.cm.Spectral(each)
                   for each in np.linspace(0, 1, len(unique_labels))]
 
-        # list_lat = []
-        # list_lon = []
-        # list_color_label = []
-        # fig, ax = plt.subplots()
-        # plot scatter map of each cluster, then appear in one plot
-        # for cluster in unique_labels:
-        # fig = plt.figure(figsize=(20, 10))
-        # ax1 = fig.add_subplot()
         plt.figure(figsize=(20, 10))
         fig = plt.figure(frameon=False)
         fig.set_size_inches(20, 20)
@@ -183,10 +179,6 @@ def main(input_path, airport_code, distance, min_sample):
                 color=color,
                 cmap=plt.cm.jet
             )
-
-            # list_lat.append(x)
-            # list_lon.append(y)
-            # list_label.append(label)
         # export images
         plt.savefig(
             "tmp/{}_{}_ms_{}_eps_{}_sil_{}.png".format(
