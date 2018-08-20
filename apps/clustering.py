@@ -6,6 +6,7 @@ import pandas as pd
 
 import matplotlib
 matplotlib.use('TkAgg')
+import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
