@@ -5,7 +5,7 @@ import click
 import csv
 
 from lib.common_utils import gen_log_file
-logger = gen_log_file(path_to_file='tmp/convert_flight_format.log')
+logger = gen_log_file(path_to_file='../tmp/convert_flight_format.log')
 
 
 def get_num_lines_in_file(file_path):

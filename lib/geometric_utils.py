@@ -1,25 +1,9 @@
 import numpy as np
 import traj_dist.distance as tdist
-from scipy.spatial.distance import directed_hausdorff
 from simplification.cutil import simplify_coords
 
 
-from sklearn import preprocessing
-
-
-def flight_id_encoder(unique_id):
-    """
-    Encoding flight id to integer number
-    Args:
-        unique_id (list[str]): list flight id
-
-    Returns:
-        le (LabelEncoder):
-
-    """
-    le = preprocessing.LabelEncoder()
-    le.fit(unique_id)
-    return le
+KM_PER_RADIAN = 6371.0088
 
 
 def simplify_coordinator(coord_curve, epsilon=0.0001):
@@ -57,6 +41,7 @@ def build_coordinator_dict(df, label_encoder, flight_ids, max_flights=1000,
             break
         count += 1
         df_min = df[df['Flight_ID'] == fid]
+        df_min = df_min.sort_values(by='DRemains', ascending=False)
         encode_id = label_encoder.transform([fid])[0]
         flight_idx.append(encode_id)
         coords = df_min.as_matrix(columns=['Latitude', 'Longitude'])

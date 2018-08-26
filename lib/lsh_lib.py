@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from datasketch import MinHash, MinHashLSH
 
 
-class ClusteringLSHLib(object):
+class LSHClusteringLib(object):
     """
     Suppose you have a very large collection of sets. Giving a query, which is
     also a set, you want to find sets in your collection that have Jaccard
@@ -64,9 +64,6 @@ class ClusteringLSHLib(object):
         """
         # make sure docId is unique over the corpus
         assert len(set(record_ids)) == len(record_ids)
-
-        print(record_ids[0:2], data[0:2])
-        print(record_ids[-1], data[-1])
 
         # for each record compute the hash
         lsh_vals = [

@@ -3,19 +3,17 @@ from time import gmtime, strftime
 import click
 import numpy as np
 import pandas as pd
-
-import matplotlib
-matplotlib.use('TkAgg')
-import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
 
 from lib.common_utils import gen_log_file
-logger = gen_log_file(path_to_file='tmp/clustering.log')
+from lib.preprocessing_lib import filter_by_airport, flight_id_encoder, \
+    build_flight_trajectory_df
 from lib.plot_utils import traffic_density_plot, traffic_flight_plot
-from lib.geometric_utils import build_coordinator_dict, flight_id_encoder,\
-    build_matrix_distances
+from lib.geometric_utils import build_matrix_distances
+
+
+logger = gen_log_file(path_to_file='../tmp/db_clustering.log')
 
 
 def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
@@ -81,7 +79,7 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
     type=int,
     default=4,
     help='Min sample value in DBSCAN')
-def main(input_path, airport_code, distance, min_sample):
+def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
     logger.info("=============================================")
     logger.info("================ DATETIME {} ================".format(history))
@@ -89,42 +87,49 @@ def main(input_path, airport_code, distance, min_sample):
     logger.info(df.head())
     file_name = input_path.split("/")[-1].replace(".csv", "")
 
-    departure_airports = df['Origin'].unique()
-    destination_airports = df['Destination'].unique()
-    one_airport = df[(df['Destination'] == airport_code)]
-
     # get fixed
-    flights_toward_airport = one_airport[(one_airport['DRemains'] < 2.0)
-                                         & (one_airport['DRemains'] > 0.01)]
+    flights_to_airport = filter_by_airport(
+        df=df,
+        airport_code=airport_code,
+        min_dr=0.01,
+        max_dr=2.0
+    )
+    file_path = "../tmp/{file_name}_{airport_code}_traffic_density.png".format(
+        file_name=file_name,
+        airport_code=airport_code
+    )
     traffic_density_plot(
-        lat=flights_toward_airport['Latitude'],
-        lon=flights_toward_airport['Longitude'],
-        directory="tmp",
-        length_cutoff=600,
-        subfix="{}_{}".format(file_name, airport_code)
+        lat=flights_to_airport['Latitude'],
+        lon=flights_to_airport['Longitude'],
+        file_path=file_path,
+        length_cutoff=600
     )
 
     logger.info("Encoding flight ID ...")
-    flight_ids = flights_toward_airport['Flight_ID'].unique().tolist()
+    flight_ids = flights_to_airport['Flight_ID'].unique().tolist()
     logger.info("Total # flight ID {}".format(len(flight_ids)))
     flight_encoder = flight_id_encoder(flight_ids)
 
-    logger.info("Extracting coordinate and flight id from dataset")
-    encoded_idx, coord_list, flight_dicts,  = build_coordinator_dict(
-        df=flights_toward_airport,
+    logger.info("Extracting trajectory coordinators and flight id from dataset")
+    flight_df, flight_dicts = build_flight_trajectory_df(
+        flights_to_airport=flights_to_airport,
         label_encoder=flight_encoder,
         flight_ids=flight_ids,
-        max_flights=1000
+        max_flights=max_flights,
+        is_simplify=True
     )
 
-    # create dataframe result
+    # create data-frame result
     clusters_df = pd.DataFrame()
-    clusters_df['Flight_ID'] = flight_encoder.inverse_transform(encoded_idx)
+    clusters_df['Flight_ID'] = flight_encoder.inverse_transform(flight_df['idx'])
 
     logger.info("Building distance matrix - {} ...".format(distance))
-    dist_matrix = build_matrix_distances(coord_list, dist_type=distance)
+    dist_matrix = build_matrix_distances(
+        coords=flight_df['trajectory'],
+        dist_type=distance
+    )
 
-    # prepare grid search for tuning eps
+    # prepare grid search for tuning epsilon
     alpha = 0.01
     upper_bound = max(dist_matrix[0,:])
     lower_bound = min(dist_matrix[0,:])
@@ -134,7 +139,6 @@ def main(input_path, airport_code, distance, min_sample):
             upper_bound, lower_bound, step)
     )
 
-    kms_per_radian = 6371.0088
     last_clusters = None
     for eps in np.arange(step*2, step*5, step):
         epsilon = eps
@@ -150,46 +154,23 @@ def main(input_path, airport_code, distance, min_sample):
         unique_labels = set(labels)
         clusters_df['c_{}_eps_{}'.format(len(unique_labels), epsilon)] = labels
 
-        logger.info(unique_labels)
-        colors = [plt.cm.Spectral(each)
-                  for each in np.linspace(0, 1, len(unique_labels))]
-
-        plt.figure(figsize=(20, 10))
-        fig = plt.figure(frameon=False)
-        fig.set_size_inches(20, 20)
-        ax = fig.add_subplot(1, 1, 1)
-        # And a corresponding grid
-        ax.grid(which='both')
-        # Or if you want different settings for the grids:
-        ax.grid(which='minor', alpha=0.2)
-        ax.grid(which='major', alpha=0.5)
-
-        for index, code in enumerate(encoded_idx):
-            if labels[index] == -1:
-                # logger.info("outlier")
-                continue
-            x = flight_dicts[code][:, 1]  # lon
-            y = flight_dicts[code][:, 0]  # lat
-            label = labels[index]
-            color = colors[label]
-            ax.scatter(
-                x=x,  # x axis
-                y=y,  # y axis
-                alpha=0.9,
-                label=label,
-                color=color,
-                cmap=plt.cm.jet
-            )
         # export images
-        plt.savefig(
-            "tmp/{}_{}_ms_{}_eps_{}_sil_{}.png".format(
+        result_file_name = "../tmp/{}_{}_dbscan_ms_{}_eps_{}_sil_{}.png".format(
                 file_name, airport_code, min_sample, epsilon, silhouette
             )
+        traffic_flight_plot(
+            flight_ids=flight_df['idx'].tolist(),
+            clusters=labels,
+            unique_labels=unique_labels,
+            flight_dicts=flight_dicts,
+            file_path=result_file_name
         )
         if len(last_clusters) <= 2:
             break
+
+    # export result
     clusters_df.to_csv(
-        "tmp/{}_{}_ms_{}.csv".format(
+        "../tmp/{}_{}_ms_{}.csv".format(
             file_name, airport_code, min_sample
         ),
         index=False
