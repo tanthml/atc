@@ -10,7 +10,8 @@ from sklearn.cluster import KMeans
 from trajclus.lib.common_utils import gen_log_file
 from trajclus.lib.preprocessing_lib import filter_by_airport, \
     build_flight_trajectory_df, flight_id_encoder
-from trajclus.lib.geometric_utils import KM_PER_RADIAN, simplify_coordinator
+from trajclus.lib.geometric_utils import KM_PER_RADIAN, simplify_coordinator, \
+    build_matrix_distances
 from trajclus.lib.lsh_lib import LSHClusteringLib
 from trajclus.lib.plot_utils import traffic_flight_plot
 
@@ -41,10 +42,12 @@ def dbscan_clustering(coords, min_sample=1, max_distance=1.0, epsilon=None):
                 metric='haversine').fit(np.radians(coords))
     cluster_labels = db.labels_
     num_clusters = len(set(cluster_labels))
-    clusters = pd.Series(
-        [coords[cluster_labels == n] for n in range(num_clusters)])
+    clusters = pd.Series([coords[cluster_labels == n]
+                        for n in range(num_clusters)])
+    centers = clusters.map(get_centermost_point)
+    centers = np.array(centers.tolist())
     print('Number of clusters for grouping: {}'.format(num_clusters))
-    return clusters, db
+    return centers, db
 
 
 def kmeans_clustering(coords, k_cluster):
@@ -59,18 +62,37 @@ def kmeans_clustering(coords, k_cluster):
 
 
 def get_centermost_point(cluster):
-    centroid = (MultiPoint(cluster).centroid.x, MultiPoint(cluster).centroid.y)
+    centroid = [MultiPoint(cluster).centroid.x, MultiPoint(cluster).centroid.y]
     centermost_point = min(cluster, key=lambda point: great_circle(point, centroid).m)
-    return tuple(centermost_point)
+
+    return centermost_point
 
 
 def compute_silhouette_score(feature_matrix, labels):
     silhouette_val = silhouette_score(
         X=feature_matrix,
         labels=labels,
-        metric='haversine'
+        metric='precomputed'
     )
     return silhouette_val
+
+
+def detect_entrance_ways(point_coords, algorithm='k-means'):
+    if algorithm not in ['k-means', 'dbscan']:
+        return [], False
+    # auto detect entrance ways
+    if algorithm == 'k-means':
+        estimated_n_entrance = 9
+        return kmeans_clustering(
+            coords=point_coords,
+            k_cluster=estimated_n_entrance
+        )
+    if algorithm == 'dbscan':
+        return dbscan_clustering(
+            coords=point_coords,
+            min_sample=1,  # must be 1
+            max_distance=30.0
+        )
 
 
 def main(input_path, airport_code='WSSS', max_flights=1000):
@@ -82,7 +104,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
     flights_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=0.1,
+        min_dr=0.2,
         max_dr=3.0
     )
     print(flights_to_airport[['DRemains', 'Latitude', 'Longitude']].head())
@@ -91,7 +113,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
     entrance_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=2.5,
+        min_dr=2.0,
         max_dr=3.0
     )
 
@@ -105,41 +127,45 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
         label_encoder=flight_encoder,
         flight_ids=flight_ids,
         max_flights=max_flights,
-        is_simplify=True
+        epsilon=0.0001
     )
 
-    entrance_to_airport = entrance_to_airport.sort_values(
-        by='DRemains', ascending=False
-    )
-    coords = entrance_to_airport[['Latitude', 'Longitude']].values
-    # print(coords[0:2])
-    # exit(0)
-    # simplified_coords = [simplify_coordinator(coord_curve=curve, epsilon=0.0001)
-    #                      for curve in coords
-    #                      ]
-    # coords = simplified_coords[0]
-    # for item in simplified_coords[1:]:
-    #     coords = np.concatenate((coords, item))
-    print("Total points %s" % len(coords))
+    entrance_trajectories = []
+    for fid in flight_ids[:max_flights]:
+        tmp_df = entrance_to_airport[entrance_to_airport['Flight_ID'] == fid]
+        tmp_df = tmp_df.sort_values(by='DRemains', ascending=False)
+        entrance_trajectories.append(tmp_df[['Latitude', 'Longitude']].values)
 
-    # reduced_groups, classifier = dbscan_clustering(
-    #     coords=coords,
-    #     min_sample=1,
-    #     max_distance=1.5
-    # )
+    simplified_coords = [simplify_coordinator(coord_curve=curve, epsilon=0.0001)
+                         for curve in entrance_trajectories
+                         ]
 
-    reduced_groups, classifier = kmeans_clustering(
-        coords=coords,
-        k_cluster=100
+    point_coords = simplified_coords[0]
+    for item in simplified_coords[1:]:
+        point_coords = np.concatenate((point_coords, item))
+    print("Total points at entrance %s" % len(point_coords))
+
+    detect_entrance_algo = 'k-means'
+    reduced_groups, classifier = detect_entrance_ways(
+        point_coords=point_coords,
+        algorithm=detect_entrance_algo
     )
-    # print(reduced_groups)
+
 
     # we trick each group label as a term, then each trajectory will contains
     # list of terms/tokens
-    # flight_df['groups'] = [classifier.fit_predict(X=coord)
-    #                        for coord in flight_df['trajectory'].tolist()]
-    flight_df['groups'] = [classifier.predict(X=coord)
-                           for coord in flight_df['trajectory'].tolist()]
+    if detect_entrance_algo == 'dbscan':
+        flight_df['groups'] = [classifier.fit_predict(X=coord)
+                               for coord in entrance_trajectories]
+    elif detect_entrance_algo == 'k-means':
+        entrance_groups = []
+        for traj in entrance_trajectories:
+            if len(traj) > 1:
+                entrance_groups.append(classifier.predict(X=traj))
+            else:
+                entrance_groups.append([-1])
+        flight_df['groups'] = entrance_groups
+
     print(flight_df.head())
 
     # convert clustering number to group label,
@@ -149,7 +175,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
 
     # Now we will apply Jaccard similarity and LSH for theses trajectories
     lsh_clustering = LSHClusteringLib(
-        threshold=0.9,
+        threshold=0.6,
         num_perm=128
     )
     flight_df['hash'] = lsh_clustering.compute_min_hash_lsh_over_data(
@@ -173,7 +199,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
     def convert_to_cluster_number(bucket_label, unique_buckets, n_curve_per_bucket=None):
-        if n_curve_per_bucket[bucket_label] <= 2:
+        if n_curve_per_bucket[bucket_label] <= 5:
             return -1
         return unique_buckets.index(bucket_label)
 
@@ -191,18 +217,19 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
     print(n_curve_per_cluster)
 
     # # evaluation
-    # dist_matrix = build_matrix_distances(
-    #     coord_list,
-    #     dist_type='directed_hausdorff'
-    # )
-    # silhouette_val = compute_silhouette_score(
-    #     feature_matrix=dist_matrix, labels=cluster_labels
-    # )
+    silhouette_val = None
+    dist_matrix = build_matrix_distances(
+        coords=flight_df['trajectory'].tolist(),
+        dist_type='directed_hausdorff'
+    )
+    silhouette_val = compute_silhouette_score(
+        feature_matrix=dist_matrix, labels=cluster_labels
+    )
 
     result_file_name =  "{file_name}_{airport_code}_lsh_sil_{subfix}.png".format(
             file_name=file_name,
             airport_code=airport_code,
-            subfix=None
+            subfix=silhouette_val
         )
     traffic_flight_plot(
         flight_ids=flight_df['idx'].tolist(),

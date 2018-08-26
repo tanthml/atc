@@ -77,7 +77,7 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
 @click.option(
     '--min_sample',
     type=int,
-    default=4,
+    default=5,
     help='Min sample value in DBSCAN')
 def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
@@ -91,8 +91,8 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     flights_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=0.01,
-        max_dr=2.0
+        min_dr=0.1,
+        max_dr=3.0
     )
     file_path = "../tmp/{file_name}_{airport_code}_traffic_density.png".format(
         file_name=file_name,
@@ -116,8 +116,21 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
         label_encoder=flight_encoder,
         flight_ids=flight_ids,
         max_flights=max_flights,
-        is_simplify=True
+        epsilon=0.0001
     )
+
+    # prepare data-frame for detect entrance points toward the airport
+    entrance_to_airport = filter_by_airport(
+        df=df,
+        airport_code=airport_code,
+        min_dr=2.0,
+        max_dr=3.0
+    )
+    entrance_trajectories = []
+    for fid in flight_ids[:max_flights]:
+        tmp_df = entrance_to_airport[entrance_to_airport['Flight_ID'] == fid]
+        tmp_df = tmp_df.sort_values(by='DRemains', ascending=False)
+        entrance_trajectories.append(tmp_df[['Latitude', 'Longitude']].values)
 
     # create data-frame result
     clusters_df = pd.DataFrame()
@@ -125,7 +138,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
 
     logger.info("Building distance matrix - {} ...".format(distance))
     dist_matrix = build_matrix_distances(
-        coords=flight_df['trajectory'],
+        coords=entrance_trajectories,
         dist_type=distance
     )
 
@@ -140,32 +153,33 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     )
 
     last_clusters = None
-    for eps in np.arange(step*2, step*5, step):
-        epsilon = eps
-        # epsilon =  eps / kms_per_radian
-        clusters, labels, silhouette = cluster_trajectories(
-            dist_matrix=dist_matrix,
-            epsilon=epsilon,
-            min_samples=min_sample
-        )
-
-        # list of cluster id along side with the  encoded flight id
-        last_clusters = clusters
-        unique_labels = set(labels)
-        clusters_df['c_{}_eps_{}'.format(len(unique_labels), epsilon)] = labels
-
-        # export images
-        result_file_name = "../tmp/{}_{}_dbscan_ms_{}_eps_{}_sil_{}.png".format(
-                file_name, airport_code, min_sample, epsilon, silhouette
+    for min_sp in range(1, min_sample, 1):
+        for eps in np.arange(step*2, step*5, step):
+            epsilon = eps
+            # epsilon =  eps / kms_per_radian
+            clusters, labels, silhouette = cluster_trajectories(
+                dist_matrix=dist_matrix,
+                epsilon=epsilon,
+                min_samples=min_sp
             )
-        traffic_flight_plot(
-            flight_ids=flight_df['idx'].tolist(),
-            clusters=labels,
-            flight_dicts=flight_dicts,
-            file_path=result_file_name
-        )
-        if len(last_clusters) <= 2:
-            break
+
+            # list of cluster id along side with the  encoded flight id
+            last_clusters = clusters
+            unique_labels = set(labels)
+            clusters_df['c_{}_eps_{}'.format(len(unique_labels), epsilon)] = labels
+
+            # export images
+            result_file_name = "../tmp/{}_{}_dbscan_ms_{}_eps_{}_sil_{}.png".format(
+                    file_name, airport_code, min_sp, epsilon, silhouette
+                )
+            traffic_flight_plot(
+                flight_ids=flight_df['idx'].tolist(),
+                clusters=labels,
+                flight_dicts=flight_dicts,
+                file_path=result_file_name
+            )
+            if len(last_clusters) <= 2:
+                break
 
     # export result
     clusters_df.to_csv(

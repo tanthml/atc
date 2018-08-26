@@ -41,7 +41,7 @@ def filter_by_airport(df, airport_code, min_dr=0.01, max_dr=2.0):
 
 
 def build_flight_trajectory_df(flights_to_airport, label_encoder, flight_ids,
-                               max_flights=1000, is_simplify=True):
+                               max_flights=1000, epsilon=None):
     """
     build data-frame contains flight-ID and coordinators of flight trajectories
     Args:
@@ -63,9 +63,9 @@ def build_flight_trajectory_df(flights_to_airport, label_encoder, flight_ids,
         df_min = df_min.sort_values(by='DRemains', ascending=False)
         encode_id = label_encoder.transform([fid])[0]
         encoded_idx.append(encode_id)
-        coords = df_min.as_matrix(columns=['Latitude', 'Longitude'])
-        if is_simplify:
-            coords = simplify_coordinator(coords, epsilon=0.00001)
+        coords = df_min[['Latitude', 'Longitude']].values
+        if epsilon:
+            coords = simplify_coordinator(coords, epsilon=epsilon)
         trajectories.append(coords)
         flight_dicts[encode_id] = coords
 

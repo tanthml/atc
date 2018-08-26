@@ -125,7 +125,7 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
             cmap=plt.cm.jet,
             s=3,
         )
-    centermost_points_plot(ax=ax, group_clusters=group_clusters)
+    # centermost_points_plot(ax=ax, group_clusters=group_clusters)
     # export images
     plt.savefig(
         "../tmp/{file_path}".format(
@@ -134,7 +134,8 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
     )
 
 def centermost_points_plot(ax, group_clusters):
-    pass
+
+
     lons = group_clusters[:, 1]
     lats = group_clusters[:, 0]
     # lats, lons = zip(*group_clusters)
@@ -142,5 +143,5 @@ def centermost_points_plot(ax, group_clusters):
         x=lons,  # x axis
         y=lats,  # y axis
         cmap=plt.cm.jet,
-        c='#99cc99', edgecolor='None', alpha=0.2, s=160
+        c='#99cc99', edgecolor='None', alpha=0.5, s=160
     )
