@@ -6,12 +6,12 @@ from geopy.distance import great_circle
 from shapely.geometry import MultiPoint
 from sklearn.metrics import silhouette_score
 
-from lib.common_utils import gen_log_file
-from lib.preprocessing_lib import filter_by_airport, \
+from trajclus.lib.common_utils import gen_log_file
+from trajclus.lib.preprocessing_lib import filter_by_airport, \
     build_flight_trajectory_df, flight_id_encoder
-from lib.geometric_utils import KM_PER_RADIAN, simplify_coordinator
-from lib.lsh_lib import LSHClusteringLib
-from lib.plot_utils import traffic_flight_plot
+from trajclus.lib.geometric_utils import KM_PER_RADIAN, simplify_coordinator
+from trajclus.lib.lsh_lib import LSHClusteringLib
+from trajclus.lib.plot_utils import traffic_flight_plot
 
 
 logger = gen_log_file(path_to_file='../tmp/lsh_clustering.log')

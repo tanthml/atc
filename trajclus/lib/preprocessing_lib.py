@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn import preprocessing
 
-from lib.geometric_utils import simplify_coordinator
+from trajclus.lib.geometric_utils import simplify_coordinator
 
 
 def flight_id_encoder(unique_id):

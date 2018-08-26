@@ -6,11 +6,11 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
 
-from lib.common_utils import gen_log_file
-from lib.preprocessing_lib import filter_by_airport, flight_id_encoder, \
+from trajclus.lib.common_utils import gen_log_file
+from trajclus.lib.preprocessing_lib import filter_by_airport, flight_id_encoder, \
     build_flight_trajectory_df
-from lib.plot_utils import traffic_density_plot, traffic_flight_plot
-from lib.geometric_utils import build_matrix_distances
+from trajclus.lib.plot_utils import traffic_density_plot, traffic_flight_plot
+from trajclus.lib.geometric_utils import build_matrix_distances
 
 
 logger = gen_log_file(path_to_file='../tmp/db_clustering.log')
