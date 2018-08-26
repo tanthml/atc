@@ -161,7 +161,6 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
         traffic_flight_plot(
             flight_ids=flight_df['idx'].tolist(),
             clusters=labels,
-            unique_labels=unique_labels,
             flight_dicts=flight_dicts,
             file_path=result_file_name
         )

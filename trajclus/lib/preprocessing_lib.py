@@ -65,7 +65,7 @@ def build_flight_trajectory_df(flights_to_airport, label_encoder, flight_ids,
         encoded_idx.append(encode_id)
         coords = df_min.as_matrix(columns=['Latitude', 'Longitude'])
         if is_simplify:
-            coords = simplify_coordinator(coords)
+            coords = simplify_coordinator(coords, epsilon=0.00001)
         trajectories.append(coords)
         flight_dicts[encode_id] = coords
 

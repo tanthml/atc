@@ -75,7 +75,7 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
         return 1
 
 
-def traffic_flight_plot(flight_ids, clusters, unique_labels, flight_dicts, file_path):
+def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clusters=None):
     """
     visualization of clustering result
     Args:
@@ -90,8 +90,13 @@ def traffic_flight_plot(flight_ids, clusters, unique_labels, flight_dicts, file_
     """
     # TODO: implement the visualization of clustering result
 
+    unique_labels = set(clusters)
     colors = [plt.cm.Spectral(each)
               for each in np.linspace(0, 1, len(set(unique_labels)))]
+
+    colors_dict = {}
+    for idx, uni in enumerate(unique_labels):
+        colors_dict[uni] = colors[idx]
 
     plt.figure(figsize=(20, 10))
     fig = plt.figure(frameon=False)
@@ -110,7 +115,7 @@ def traffic_flight_plot(flight_ids, clusters, unique_labels, flight_dicts, file_
         x = flight_dicts[code][:, 1]  # lon
         y = flight_dicts[code][:, 0]  # lat
         label = clusters[index]
-        color = colors[label]
+        color = colors_dict[label]
         ax.scatter(
             x=x,  # x axis
             y=y,  # y axis
@@ -118,8 +123,9 @@ def traffic_flight_plot(flight_ids, clusters, unique_labels, flight_dicts, file_
             label=label,
             color=color,
             cmap=plt.cm.jet,
-            s=1,
+            s=3,
         )
+    centermost_points_plot(ax=ax, group_clusters=group_clusters)
     # export images
     plt.savefig(
         "../tmp/{file_path}".format(
@@ -127,15 +133,14 @@ def traffic_flight_plot(flight_ids, clusters, unique_labels, flight_dicts, file_
         )
     )
 
-def plot_centermost_points(reduced_groups):
+def centermost_points_plot(ax, group_clusters):
     pass
-    # grid group reduce size
-    # print(reduced_groups.head())
-    # centermost_points = reduced_groups.map(get_centermost_point)
-    # lats, lons = zip(*centermost_points)
-    # ax.scatter(
-    #     x=lons,  # x axis
-    #     y=lats,  # y axis
-    #     cmap=plt.cm.jet,
-    #     c='#99cc99', edgecolor='None', alpha=0.7, s=160
-    # )
+    lons = group_clusters[:, 1]
+    lats = group_clusters[:, 0]
+    # lats, lons = zip(*group_clusters)
+    ax.scatter(
+        x=lons,  # x axis
+        y=lats,  # y axis
+        cmap=plt.cm.jet,
+        c='#99cc99', edgecolor='None', alpha=0.2, s=160
+    )

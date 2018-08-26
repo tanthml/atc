@@ -1,6 +1,6 @@
 import numpy as np
 import traj_dist.distance as tdist
-from simplification.cutil import simplify_coords
+from simplification.cutil import simplify_coords, simplify_coords_vw
 
 
 KM_PER_RADIAN = 6371.0088
