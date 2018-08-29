@@ -143,7 +143,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     )
 
     # prepare grid search for tuning epsilon
-    alpha = 0.01
+    alpha = 0.001
     upper_bound = max(dist_matrix[0,:])
     lower_bound = min(dist_matrix[0,:])
     step = (upper_bound - lower_bound) * alpha
@@ -169,8 +169,8 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
             clusters_df['c_{}_eps_{}'.format(len(unique_labels), epsilon)] = labels
 
             # export images
-            result_file_name = "../tmp/{}_{}_dbscan_ms_{}_eps_{}_sil_{}.png".format(
-                    file_name, airport_code, min_sp, epsilon, silhouette
+            result_file_name = "../tmp/{}_{}_dbscan_sil_{}_ms_{}_eps_{}.png".format(
+                    file_name, airport_code, silhouette, min_sp, epsilon
                 )
             traffic_flight_plot(
                 flight_ids=flight_df['idx'].tolist(),

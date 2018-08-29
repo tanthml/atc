@@ -116,16 +116,21 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
         y = flight_dicts[code][:, 0]  # lat
         label = clusters[index]
         color = colors_dict[label]
-        ax.scatter(
-            x=x,  # x axis
-            y=y,  # y axis
-            alpha=0.9,
-            label=label,
-            color=color,
-            cmap=plt.cm.jet,
-            s=3,
-        )
-    # centermost_points_plot(ax=ax, group_clusters=group_clusters)
+        plt.plot(x, y, '-ok', color=color,
+                 markersize=1, linewidth=2,
+                 markerfacecolor='white',
+                 markeredgecolor='gray',
+                 markeredgewidth=1)
+        # ax.scatter(
+        #     x=x,  # x axis
+        #     y=y,  # y axis
+        #     alpha=0.9,
+        #     label=label,
+        #     color=color,
+        #     cmap=plt.cm.jet,
+        #     s=10,
+        # )
+    centermost_points_plot(ax=ax, group_clusters=group_clusters)
     # export images
     plt.savefig(
         "../tmp/{file_path}".format(

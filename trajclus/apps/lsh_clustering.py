@@ -1,6 +1,6 @@
+import click
 import pandas as pd
 import numpy as np
-
 from sklearn.cluster import DBSCAN
 from geopy.distance import great_circle
 from shapely.geometry import MultiPoint
@@ -77,12 +77,11 @@ def compute_silhouette_score(feature_matrix, labels):
     return silhouette_val
 
 
-def detect_entrance_ways(point_coords, algorithm='k-means'):
+def detect_entrance_ways(point_coords, algorithm='k-means', estimated_n_entrance=9):
     if algorithm not in ['k-means', 'dbscan']:
         return [], False
     # auto detect entrance ways
     if algorithm == 'k-means':
-        estimated_n_entrance = 9
         return kmeans_clustering(
             coords=point_coords,
             k_cluster=estimated_n_entrance
@@ -91,11 +90,11 @@ def detect_entrance_ways(point_coords, algorithm='k-means'):
         return dbscan_clustering(
             coords=point_coords,
             min_sample=1,  # must be 1
-            max_distance=30.0
+            max_distance=15.0
         )
 
 
-def main(input_path, airport_code='WSSS', max_flights=1000):
+def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance=9, threshold=0.6, algo='k-means'):
     # load raw-data from csv
     df = pd.read_csv(input_path)
     file_name = input_path.split("/")[-1].replace(".csv", "")
@@ -105,7 +104,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
         df=df,
         airport_code=airport_code,
         min_dr=0.2,
-        max_dr=3.0
+        max_dr=5.0
     )
     print(flights_to_airport[['DRemains', 'Latitude', 'Longitude']].head())
 
@@ -114,7 +113,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
         df=df,
         airport_code=airport_code,
         min_dr=2.0,
-        max_dr=3.0
+        max_dr=5.0
     )
 
     logger.info("Encoding flight ID ...")
@@ -145,10 +144,11 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
         point_coords = np.concatenate((point_coords, item))
     print("Total points at entrance %s" % len(point_coords))
 
-    detect_entrance_algo = 'k-means'
+    detect_entrance_algo = algo
     reduced_groups, classifier = detect_entrance_ways(
         point_coords=point_coords,
-        algorithm=detect_entrance_algo
+        algorithm=detect_entrance_algo,
+        estimated_n_entrance=estimated_n_entrance
     )
 
 
@@ -175,7 +175,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
 
     # Now we will apply Jaccard similarity and LSH for theses trajectories
     lsh_clustering = LSHClusteringLib(
-        threshold=0.6,
+        threshold=threshold,
         num_perm=128
     )
     flight_df['hash'] = lsh_clustering.compute_min_hash_lsh_over_data(
@@ -226,10 +226,12 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
         feature_matrix=dist_matrix, labels=cluster_labels
     )
 
-    result_file_name =  "{file_name}_{airport_code}_lsh_sil_{subfix}.png".format(
+    result_file_name =  "{file_name}_{airport_code}_lsh_sil_{subfix}_{threshold}_{n_entrance}.png".format(
             file_name=file_name,
             airport_code=airport_code,
-            subfix=silhouette_val
+            subfix="{}_{}".format(silhouette_val, detect_entrance_algo),
+            threshold=threshold,
+            n_entrance=estimated_n_entrance
         )
     traffic_flight_plot(
         flight_ids=flight_df['idx'].tolist(),
@@ -240,6 +242,27 @@ def main(input_path, airport_code='WSSS', max_flights=1000):
     )
 
 
+@click.command()
+@click.option(
+    '--input_path',
+    type=str,
+    required=True,
+    help='Full path to the trajectory file in CSV format')
+@click.option(
+    '--airport_code',
+    type=str,
+    default='WSSS',
+    help='Air Port Codename')
+@click.option(
+    '--max_flights',
+    type=int,
+    default=1000,
+    help='Max number of flights')
+def main_cli(input_path, airport_code, max_flights=1000):
+    main(input_path=input_path, airport_code=airport_code, max_flights=max_flights,
+         estimated_n_entrance=30, threshold=0.5, algo='k-means'
+         )
+
+
 if __name__ == '__main__':
-    main("/Users/tanthm/jvn_data/NTU/tracks_2015_06_01-001.csv")
-    # main("/Users/tanthm/jvn_data/NTU/tracks_2016_09_01_destination_wsss.csv")
+    main_cli()
