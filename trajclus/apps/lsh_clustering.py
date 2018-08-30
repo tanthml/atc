@@ -106,7 +106,6 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
         min_dr=0.2,
         max_dr=5.0
     )
-    print(flights_to_airport[['DRemains', 'Latitude', 'Longitude']].head())
 
     # prepare data-frame for detect entrance points toward the airport
     entrance_to_airport = filter_by_airport(
@@ -142,7 +141,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     point_coords = simplified_coords[0]
     for item in simplified_coords[1:]:
         point_coords = np.concatenate((point_coords, item))
-    print("Total points at entrance %s" % len(point_coords))
+    logger.info("Total points at entrance %s" % len(point_coords))
 
     detect_entrance_algo = algo
     reduced_groups, classifier = detect_entrance_ways(
@@ -166,12 +165,10 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
                 entrance_groups.append([-1])
         flight_df['groups'] = entrance_groups
 
-    print(flight_df.head())
-
     # convert clustering number to group label,
     flight_df['groups'] = flight_df['groups'].apply(
         lambda clusters: ["G{}".format(c) for c in clusters])
-    print(flight_df.head())
+    logger.info(flight_df.head())
 
     # Now we will apply Jaccard similarity and LSH for theses trajectories
     lsh_clustering = LSHClusteringLib(
@@ -186,16 +183,14 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     flight_df['duplicated'] = flight_df['hash'].apply(
         lambda x: lsh_clustering.query_duplicated_record(x)
     )
-    print(flight_df.head())
 
     flight_df['buckets'] = flight_df['duplicated'].apply(
         lambda x: '_'.join(x)
     )
-    print(flight_df.head())
+    logger.info(flight_df.head())
     unique_buckets = flight_df['buckets'].unique().tolist()
-    print("number buckets %s" % len(unique_buckets))
-    print(unique_buckets)
-    print(len(flight_df.groupby('buckets').size()))
+    logger.info("number buckets %s" % len(unique_buckets))
+    logger.info(len(flight_df.groupby('buckets').size()))
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
     def convert_to_cluster_number(bucket_label, unique_buckets, n_curve_per_bucket=None):
@@ -208,13 +203,14 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
         for bucket in flight_df['buckets'].tolist()
     ]
     flight_df['cluster'] = cluster_labels
-    print(flight_df.head())
-    print("Non-outlier cluster number %s" %
+    logger.info(flight_df.head())
+    logger.info("Non-outlier cluster number %s" %
           len(flight_df[flight_df['cluster'] != -1]['cluster'].unique().tolist())
     )
-    print(flight_df[flight_df['cluster'] != -1]['cluster'].unique())
+    logger.info(flight_df[flight_df['cluster'] != -1]['cluster'].unique())
     n_curve_per_cluster = flight_df.groupby('cluster').size()
-    print(n_curve_per_cluster)
+    logger.info(n_curve_per_cluster)
+
 
     # # evaluation
     silhouette_val = None
@@ -233,6 +229,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
             threshold=threshold,
             n_entrance=estimated_n_entrance
         )
+    flight_df[['flight_id', 'buckets', 'cluster']].to_csv("../tmp/{}.csv".format(result_file_name), index=False)
     traffic_flight_plot(
         flight_ids=flight_df['idx'].tolist(),
         clusters=cluster_labels,

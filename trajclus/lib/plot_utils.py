@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import seaborn as sns
 import matplotlib.pyplot as plt
 
