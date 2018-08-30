@@ -211,11 +211,11 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     n_curve_per_cluster = flight_df.groupby('cluster').size()
     logger.info(n_curve_per_cluster)
 
-    plot_file_name =  "{file_name}_{airport_code}_lsh_{algo}_{threshold}_{n_entrance}.png".format(
+    plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}.png".format(
             file_name=file_name,
-            airport_code=airport_code,
-            algo=detect_entrance_algo,
+            airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
             threshold=threshold,
+            algo=detect_entrance_algo,
             n_entrance=estimated_n_entrance
         )
     traffic_flight_plot(
@@ -236,11 +236,11 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     silhouette_val = compute_silhouette_score(
         feature_matrix=dist_matrix, labels=cluster_labels
     )
-    result_file_name =  "{file_name}_{airport_code}_lsh]_{algo}_{threshold}_{n_entrance}_sil_{silhoette}.png".format(
+    result_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_sil_{silhoette}.png".format(
             file_name=file_name,
-            airport_code=airport_code,
-            algo=detect_entrance_algo,
+            airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
             threshold=threshold,
+            algo=detect_entrance_algo,
             n_entrance=estimated_n_entrance,
             silhoette=silhouette_val
 
