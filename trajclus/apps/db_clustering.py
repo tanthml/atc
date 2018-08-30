@@ -92,7 +92,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
         df=df,
         airport_code=airport_code,
         min_dr=0.1,
-        max_dr=3.0
+        max_dr=5.0
     )
     file_path = "../tmp/{file_name}_{airport_code}_traffic_density.png".format(
         file_name=file_name,
@@ -123,7 +123,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     entrance_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=0.2,
+        min_dr=2.0,
         max_dr=5.0
     )
     entrance_trajectories = []

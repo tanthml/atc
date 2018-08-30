@@ -211,6 +211,21 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     n_curve_per_cluster = flight_df.groupby('cluster').size()
     logger.info(n_curve_per_cluster)
 
+    plot_file_name =  "{file_name}_{airport_code}_lsh_{algo}_{threshold}_{n_entrance}.png".format(
+            file_name=file_name,
+            airport_code=airport_code,
+            algo=detect_entrance_algo,
+            threshold=threshold,
+            n_entrance=estimated_n_entrance
+        )
+    traffic_flight_plot(
+        flight_ids=flight_df['idx'].tolist(),
+        clusters=cluster_labels,
+        flight_dicts=flight_dicts,
+        file_path=plot_file_name,
+        group_clusters=reduced_groups,
+        info={'file_name':file_name, 'airport_code':airport_code}
+    )
 
     # # evaluation
     silhouette_val = None
@@ -221,23 +236,16 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     silhouette_val = compute_silhouette_score(
         feature_matrix=dist_matrix, labels=cluster_labels
     )
-
-    result_file_name =  "{file_name}_{airport_code}_lsh_sil_{subfix}_{threshold}_{n_entrance}.png".format(
+    result_file_name =  "{file_name}_{airport_code}_lsh]_{algo}_{threshold}_{n_entrance}_sil_{silhoette}.png".format(
             file_name=file_name,
             airport_code=airport_code,
-            subfix="{}_{}".format(silhouette_val, detect_entrance_algo),
+            algo=detect_entrance_algo,
             threshold=threshold,
-            n_entrance=estimated_n_entrance
+            n_entrance=estimated_n_entrance,
+            silhoette=silhouette_val
+
         )
     flight_df[['flight_id', 'buckets', 'cluster']].to_csv("../tmp/{}.csv".format(result_file_name), index=False)
-    traffic_flight_plot(
-        flight_ids=flight_df['idx'].tolist(),
-        clusters=cluster_labels,
-        flight_dicts=flight_dicts,
-        file_path=result_file_name,
-        group_clusters=reduced_groups,
-        info={'file_name':file_name, 'airport_code':airport_code}
-    )
 
 
 @click.command()
