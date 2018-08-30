@@ -75,7 +75,7 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
         return 1
 
 
-def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clusters=None):
+def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clusters=None, info={}):
     """
     visualization of clustering result
     Args:
@@ -116,6 +116,10 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
         y = flight_dicts[code][:, 0]  # lat
         label = clusters[index]
         color = colors_dict[label]
+        plt.title("{} {}".format(info['airport_code'], info['file_name']),
+                  fontsize=30)
+        plt.xlabel('Longitude', fontsize=20)
+        plt.ylabel('Latitude', fontsize=20)
         plt.plot(x, y, '-ok', color=color,
                  markersize=1, linewidth=2,
                  markerfacecolor='white',
@@ -130,7 +134,9 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
         #     cmap=plt.cm.jet,
         #     s=10,
         # )
-    centermost_points_plot(ax=ax, group_clusters=group_clusters)
+    plt.legend()
+    if 'lsh' in file_path:
+        centermost_points_plot(ax=ax, group_clusters=group_clusters)
     # export images
     plt.savefig(
         "../tmp/{file_path}".format(

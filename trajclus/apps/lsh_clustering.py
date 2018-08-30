@@ -235,7 +235,8 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
         clusters=cluster_labels,
         flight_dicts=flight_dicts,
         file_path=result_file_name,
-        group_clusters=reduced_groups
+        group_clusters=reduced_groups,
+        info={'file_name':file_name, 'airport_code':airport_code}
     )
 
 
