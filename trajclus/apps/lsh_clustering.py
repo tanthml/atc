@@ -193,13 +193,13 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     logger.info(len(flight_df.groupby('buckets').size()))
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
-    def convert_to_cluster_number(bucket_label, unique_buckets, n_curve_per_bucket=None):
-        if n_curve_per_bucket[bucket_label] <= 5:
+    def convert_to_cluster_number(bucket_label, unique_buckets, total_buckets, n_curve_per_bucket=None):
+        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 0.5:
             return -1
         return unique_buckets.index(bucket_label)
 
     cluster_labels = [
-        convert_to_cluster_number(bucket, unique_buckets, n_curve_per_bucket)
+        convert_to_cluster_number(bucket, unique_buckets, len(flight_df), n_curve_per_bucket)
         for bucket in flight_df['buckets'].tolist()
     ]
     flight_df['cluster'] = cluster_labels
@@ -224,7 +224,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
         flight_dicts=flight_dicts,
         file_path=plot_file_name,
         group_clusters=reduced_groups,
-        info={'file_name':file_name, 'airport_code':airport_code}
+        info={'file_name': file_name, 'airport_code': airport_code}
     )
 
     # # evaluation
