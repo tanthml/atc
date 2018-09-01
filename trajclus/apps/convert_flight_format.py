@@ -4,7 +4,7 @@ from copy import deepcopy
 import click
 import csv
 
-from trajclus.lib import gen_log_file
+from trajclus.lib.common_utils import gen_log_file
 logger = gen_log_file(path_to_file='../tmp/convert_flight_format.log')
 
 

@@ -44,7 +44,9 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
     # Remove the nans from the array
     x1 = x1[~np.isnan(x1)]
     y1 = y1[~np.isnan(y1)]
-
+    plt.title(file_path.split("/")[-1], fontsize=30)
+    plt.xlabel('Longitude', fontsize=20)
+    plt.ylabel('Latitude', fontsize=20)
     # Log colormap
     hb = ax.hexbin(
         x1,
@@ -57,7 +59,7 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
 
     fig.add_axes(ax)
     ax.axis('equal')
-    plt.axis('off')
+    # plt.axis('on')
     # Setting the axes like this avoid the zero values in
     # the preallocated empty array.
     ax.axis([xmin, xmax, ymin, ymax])

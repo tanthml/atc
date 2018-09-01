@@ -264,10 +264,22 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     type=int,
     default=1000,
     help='Max number of flights')
+@click.option(
+    '--airport_code',
+    type=str,
+    default='WSSS,VTBS,VVTS',
+    help='AirPort Codename')
 def main_cli(input_path, airport_code, max_flights=1000):
-    main(input_path=input_path, airport_code=airport_code, max_flights=max_flights,
-         estimated_n_entrance=30, threshold=0.5, algo='k-means'
-         )
+    airports = airport_code.split(",")
+    for airport in airports:
+        main(
+            input_path=input_path,
+            airport_code=airport,
+            max_flights=max_flights,
+            estimated_n_entrance=30,
+            threshold=0.5,
+            algo='k-means'
+        )
 
 
 if __name__ == '__main__':

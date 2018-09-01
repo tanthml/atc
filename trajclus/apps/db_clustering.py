@@ -9,7 +9,7 @@ from sklearn.metrics import silhouette_score
 from trajclus.lib.common_utils import gen_log_file
 from trajclus.lib.preprocessing_lib import filter_by_airport, flight_id_encoder, \
     build_flight_trajectory_df
-from trajclus.lib.plot_utils import traffic_density_plot, traffic_flight_plot
+from trajclus.lib.plot_utils import traffic_flight_plot
 from trajclus.lib.geometric_utils import build_matrix_distances
 
 
@@ -58,27 +58,6 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
     return clusters, labels, silhouette_val
 
 
-@click.command()
-@click.option(
-    '--input_path',
-    type=str,
-    required=True,
-    help='Full path to the trajectory file in CSV format')
-@click.option(
-    '--airport_code',
-    type=str,
-    default='WSSS',
-    help='Air Port Codename')
-@click.option(
-    '--distance',
-    type=str,
-    default='directed_hausdorff',
-    help='Distance algorithm current support: directed_hausdorff, frechet')
-@click.option(
-    '--min_sample',
-    type=int,
-    default=4,
-    help='Min sample value in DBSCAN')
 def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
     logger.info("=============================================")
@@ -94,16 +73,10 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
         min_dr=0.1,
         max_dr=5.0
     )
-    file_path = "../tmp/{file_name}_{airport_code}_traffic_density.png".format(
-        file_name=file_name,
-        airport_code=airport_code
-    )
-    traffic_density_plot(
-        lat=flights_to_airport['Latitude'],
-        lon=flights_to_airport['Longitude'],
-        file_path=file_path,
-        length_cutoff=600
-    )
+
+    if max_flights <= len(flights_to_airport):
+        max_flights = len(flights_to_airport)
+
 
     logger.info("Encoding flight ID ...")
     flight_ids = flights_to_airport['Flight_ID'].unique().tolist()
@@ -144,8 +117,8 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
 
     # prepare grid search for tuning epsilon
     alpha = 0.001
-    upper_bound = max(dist_matrix[0,:])
-    lower_bound = min(dist_matrix[0,:])
+    upper_bound = max(dist_matrix[0, :])
+    lower_bound = min(dist_matrix[0, :])
     step = (upper_bound - lower_bound) * alpha
     logger.info(
         "upper_bound {}, lower_bound {}, step {}".format(
@@ -193,5 +166,43 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     logger.info("\n {}".format(clusters_df.head()))
 
 
+@click.command()
+@click.option(
+    '--input_path',
+    type=str,
+    required=True,
+    help='Full path to the trajectory file in CSV format')
+@click.option(
+    '--airport_code',
+    type=str,
+    default='WSSS,VTBS,VVTS',
+    help='Air Port Codename')
+@click.option(
+    '--max_flights',
+    type=int,
+    default=1000,
+    help='Max number of flights')
+@click.option(
+    '--distance',
+    type=str,
+    default='directed_hausdorff',
+    help='Distance algorithm current support: directed_hausdorff, frechet')
+@click.option(
+    '--min_sample',
+    type=int,
+    default=4,
+    help='Min sample value in DBSCAN')
+def main_cli(input_path, airport_code, distance, min_sample, max_flights=1000):
+    airports = airport_code.split(",")
+    for airport in airports:
+        main(
+            input_path=input_path,
+            airport_code=airport,
+            distance=distance,
+            min_sample=min_sample,
+            max_flights=max_flights
+        )
+
+
 if __name__ == '__main__':
-    main()
+    main_cli()
