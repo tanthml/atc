@@ -93,6 +93,7 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
     # TODO: implement the visualization of clustering result
 
     unique_labels = set(clusters)
+
     colors = [plt.cm.Spectral(each)
               for each in np.linspace(0, 1, len(set(unique_labels)))]
 
@@ -111,7 +112,7 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
     ax.grid(which='major', alpha=0.9)
 
     for index, code in enumerate(flight_ids):
-        if clusters[index] == -1:
+        if clusters[index] == 0:
             # logger.info("outlier")
             continue
         x = flight_dicts[code][:, 1]  # lon

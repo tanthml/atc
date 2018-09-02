@@ -94,7 +94,16 @@ def detect_entrance_ways(point_coords, algorithm='k-means', estimated_n_entrance
         )
 
 
-def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance=9, threshold=0.6, algo='k-means'):
+def main(
+        input_path,
+        airport_code='WSSS',
+        max_flights=1000,
+        estimated_n_entrance=9,
+        threshold=0.6,
+        algo='k-means',
+        min_dr=1.0,
+        max_dr=2.0
+):
     # load raw-data from csv
     df = pd.read_csv(input_path)
     file_name = input_path.split("/")[-1].replace(".csv", "")
@@ -103,16 +112,16 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     flights_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=0.2,
-        max_dr=5.0
+        min_dr=0.0,
+        max_dr=max_dr
     )
 
     # prepare data-frame for detect entrance points toward the airport
     entrance_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=2.0,
-        max_dr=5.0
+        min_dr=min_dr,
+        max_dr=max_dr
     )
 
     logger.info("Encoding flight ID ...")
@@ -194,7 +203,7 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
     def convert_to_cluster_number(bucket_label, unique_buckets, total_buckets, n_curve_per_bucket=None):
-        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 0.5:
+        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 5.0:
             return -1
         return unique_buckets.index(bucket_label)
 
@@ -211,12 +220,13 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     n_curve_per_cluster = flight_df.groupby('cluster').size()
     logger.info(n_curve_per_cluster)
 
-    plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}.png".format(
+    plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}.png".format(
             file_name=file_name,
             airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
             threshold=threshold,
             algo=detect_entrance_algo,
-            n_entrance=estimated_n_entrance
+            n_entrance=estimated_n_entrance,
+            dr_range="{}_{}".format(min_dr, max_dr)
         )
     traffic_flight_plot(
         flight_ids=flight_df['idx'].tolist(),
@@ -236,12 +246,13 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     silhouette_val = compute_silhouette_score(
         feature_matrix=dist_matrix, labels=cluster_labels
     )
-    result_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_sil_{silhoette}.png".format(
+    result_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}_sil_{silhoette}.png".format(
             file_name=file_name,
             airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
             threshold=threshold,
             algo=detect_entrance_algo,
             n_entrance=estimated_n_entrance,
+            dr_range="{}_{}".format(min_dr, max_dr),
             silhoette=silhouette_val
 
         )
@@ -269,8 +280,14 @@ def main(input_path, airport_code='WSSS', max_flights=1000, estimated_n_entrance
     type=str,
     default='WSSS,VTBS,VVTS',
     help='AirPort Codename')
-def main_cli(input_path, airport_code, max_flights=1000):
+@click.option(
+    '--dr_range',
+    type=str,
+    default='0.5,3.0',
+    help='distance remains in radius')
+def main_cli(input_path, airport_code, max_flights, dr_range):
     airports = airport_code.split(",")
+    dr_ranges = [float(i) for i in dr_range.split(",")]
     for airport in airports:
         main(
             input_path=input_path,
@@ -278,7 +295,9 @@ def main_cli(input_path, airport_code, max_flights=1000):
             max_flights=max_flights,
             estimated_n_entrance=30,
             threshold=0.5,
-            algo='k-means'
+            algo='k-means',
+            min_dr=dr_ranges[0],
+            max_dr=dr_ranges[1]
         )
 
 

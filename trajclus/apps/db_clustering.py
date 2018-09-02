@@ -10,7 +10,7 @@ from trajclus.lib.common_utils import gen_log_file
 from trajclus.lib.preprocessing_lib import filter_by_airport, flight_id_encoder, \
     build_flight_trajectory_df
 from trajclus.lib.plot_utils import traffic_flight_plot
-from trajclus.lib.geometric_utils import build_matrix_distances
+from trajclus.lib.geometric_utils import build_matrix_distances, KM_PER_RADIAN
 
 
 logger = gen_log_file(path_to_file='../tmp/db_clustering.log')
@@ -58,7 +58,7 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
     return clusters, labels, silhouette_val
 
 
-def main(input_path, airport_code, distance, min_sample, max_flights=1000):
+def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, max_dr):
     history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
     logger.info("=============================================")
     logger.info("================ DATETIME {} ================".format(history))
@@ -71,7 +71,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
         df=df,
         airport_code=airport_code,
         min_dr=0.1,
-        max_dr=5.0
+        max_dr=max_dr
     )
 
     if max_flights <= len(flights_to_airport):
@@ -96,8 +96,8 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
     entrance_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=2.0,
-        max_dr=5.0
+        min_dr=min_dr,
+        max_dr=max_dr
     )
     entrance_trajectories = []
     for fid in flight_ids[:max_flights]:
@@ -124,11 +124,13 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
         "upper_bound {}, lower_bound {}, step {}".format(
             upper_bound, lower_bound, step)
     )
+    eps_list = np.arange(step*2, step*5, step)
+    # eps_list =[max_km / KM_PER_RADIAN for max_km in [5, 10, 15, 20]]
 
     last_clusters = None
     # for min_sp in range(1, min_sample, 1):
     min_sp = min_sample
-    for eps in np.arange(step*2, step*5, step):
+    for eps in eps_list:
         epsilon = eps
         # epsilon =  eps / kms_per_radian
         clusters, labels, silhouette = cluster_trajectories(
@@ -153,7 +155,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
             file_path=result_file_name,
             info={'file_name': file_name, 'airport_code': airport_code}
         )
-        if len(last_clusters) <= 2:
+        if len(last_clusters) < 2:
             break
 
     # export result
@@ -190,17 +192,25 @@ def main(input_path, airport_code, distance, min_sample, max_flights=1000):
 @click.option(
     '--min_sample',
     type=int,
-    default=4,
+    default=2,
     help='Min sample value in DBSCAN')
-def main_cli(input_path, airport_code, distance, min_sample, max_flights=1000):
+@click.option(
+    '--dr_range',
+    type=str,
+    default='0.5,3.0',
+    help='distance remains in radius')
+def main_cli(input_path, airport_code, distance, min_sample, max_flights, dr_range):
     airports = airport_code.split(",")
+    dr_ranges = [float(i) for i in dr_range.split(",")]
     for airport in airports:
         main(
             input_path=input_path,
             airport_code=airport,
             distance=distance,
             min_sample=min_sample,
-            max_flights=max_flights
+            max_flights=max_flights,
+            min_dr=dr_ranges[0],
+            max_dr=dr_ranges[1]
         )
 
 
