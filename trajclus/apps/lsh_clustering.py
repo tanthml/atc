@@ -116,7 +116,8 @@ def main(
         algo='k-means',
         min_dr=1.0,
         max_dr=2.0,
-        filter_date=''
+        filter_date='',
+        epsilon=0.001
 ):
     # load raw-data from csv
     logger = gen_log_file(path_to_file='../tmp/lsh_clustering_{}.log'.format(airport_code))
@@ -157,7 +158,7 @@ def main(
         label_encoder=flight_encoder,
         flight_ids=flight_ids,
         max_flights=max_flights,
-        epsilon=0.0001
+        epsilon=epsilon
     )
 
     entrance_trajectories = []
@@ -166,7 +167,7 @@ def main(
         tmp_df = tmp_df.sort_values(by='DRemains', ascending=False)
         entrance_trajectories.append(tmp_df[['Latitude', 'Longitude']].values)
 
-    simplified_coords = [simplify_coordinator(coord_curve=curve, epsilon=0.0001)
+    simplified_coords = [simplify_coordinator(coord_curve=curve, epsilon=epsilon)
                          for curve in entrance_trajectories
                          ]
 
@@ -224,7 +225,7 @@ def main(
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
     def convert_to_cluster_number(bucket_label, unique_buckets, total_buckets, n_curve_per_bucket=None):
-        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 5.0:
+        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 1.0:
             return -1
         return unique_buckets.index(bucket_label)
 
@@ -315,7 +316,12 @@ def main(
     type=str,
     default='',
     help='Filter by date example 2016-09-01')
-def main_cli(input_path, airport_code, max_flights, dr_range, filter_date):
+@click.option(
+    '--epsilon',
+    type=float,
+    default=0.001,
+    help='epsilon for simplified curve using Douglas Peucker')
+def main_cli(input_path, airport_code, max_flights, dr_range, filter_date, epsilon):
     airports = airport_code.split(",")
     dr_ranges = [float(i) for i in dr_range.split(",")]
     for airport in airports:
@@ -328,7 +334,8 @@ def main_cli(input_path, airport_code, max_flights, dr_range, filter_date):
             algo='k-means',
             min_dr=dr_ranges[0],
             max_dr=dr_ranges[1],
-            filter_date=filter_date
+            filter_date=filter_date,
+            epsilon=epsilon
         )
 
 
