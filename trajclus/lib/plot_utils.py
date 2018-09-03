@@ -138,8 +138,8 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
         #     s=10,
         # )
     plt.legend()
-    if 'lsh' in file_path:
-        centermost_points_plot(ax=ax, group_clusters=group_clusters)
+    # if 'lsh' in file_path:
+    #     centermost_points_plot(ax=ax, group_clusters=group_clusters)
     # export images
     plt.savefig(
         "../tmp/{file_path}".format(

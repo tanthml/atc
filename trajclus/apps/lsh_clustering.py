@@ -16,9 +16,6 @@ from trajclus.lib.lsh_lib import LSHClusteringLib
 from trajclus.lib.plot_utils import traffic_flight_plot
 
 
-logger = gen_log_file(path_to_file='../tmp/lsh_clustering.log')
-
-
 def dbscan_clustering(coords, min_sample=1, max_distance=1.0, epsilon=None):
     """
     Mapping all points in map to reduced cluster
@@ -94,6 +91,22 @@ def detect_entrance_ways(point_coords, algorithm='k-means', estimated_n_entrance
         )
 
 
+def filter_by_date(datetime, filter_date):
+    """
+    Filter date
+    Args:
+        datetime:
+        filter_date:
+
+    Returns:
+
+    """
+    str_date = str(datetime).split(' ')[0]
+    if str_date == str(filter_date):
+        return True
+    return False
+
+
 def main(
         input_path,
         airport_code='WSSS',
@@ -102,11 +115,21 @@ def main(
         threshold=0.6,
         algo='k-means',
         min_dr=1.0,
-        max_dr=2.0
+        max_dr=2.0,
+        filter_date=''
 ):
     # load raw-data from csv
+    logger = gen_log_file(path_to_file='../tmp/lsh_clustering_{}.log'.format(airport_code))
     df = pd.read_csv(input_path)
     file_name = input_path.split("/")[-1].replace(".csv", "")
+
+    if filter_date != '':
+        print("before filtering %s" % len(df))
+        df['filtered'] = df['Actual_Arrival_Time_(UTC)'].apply(
+            lambda x: filter_by_date(datetime=x, filter_date=filter_date)
+        )
+        df = df[df['filtered']]
+        print("after filtering %s" % len(df))
 
     # filter data by airport code-name
     flights_to_airport = filter_by_airport(
@@ -177,7 +200,6 @@ def main(
     # convert clustering number to group label,
     flight_df['groups'] = flight_df['groups'].apply(
         lambda clusters: ["G{}".format(c) for c in clusters])
-    logger.info(flight_df.head())
 
     # Now we will apply Jaccard similarity and LSH for theses trajectories
     lsh_clustering = LSHClusteringLib(
@@ -196,7 +218,6 @@ def main(
     flight_df['buckets'] = flight_df['duplicated'].apply(
         lambda x: '_'.join(x)
     )
-    logger.info(flight_df.head())
     unique_buckets = flight_df['buckets'].unique().tolist()
     logger.info("number buckets %s" % len(unique_buckets))
     logger.info(len(flight_df.groupby('buckets').size()))
@@ -212,7 +233,6 @@ def main(
         for bucket in flight_df['buckets'].tolist()
     ]
     flight_df['cluster'] = cluster_labels
-    logger.info(flight_df.head())
     logger.info("Non-outlier cluster number %s" %
           len(flight_df[flight_df['cluster'] != -1]['cluster'].unique().tolist())
     )
@@ -220,22 +240,6 @@ def main(
     n_curve_per_cluster = flight_df.groupby('cluster').size()
     logger.info(n_curve_per_cluster)
 
-    plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}.png".format(
-            file_name=file_name,
-            airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
-            threshold=threshold,
-            algo=detect_entrance_algo,
-            n_entrance=estimated_n_entrance,
-            dr_range="{}_{}".format(min_dr, max_dr)
-        )
-    traffic_flight_plot(
-        flight_ids=flight_df['idx'].tolist(),
-        clusters=cluster_labels,
-        flight_dicts=flight_dicts,
-        file_path=plot_file_name,
-        group_clusters=reduced_groups,
-        info={'file_name': file_name, 'airport_code': airport_code}
-    )
 
     # # evaluation
     silhouette_val = None
@@ -246,6 +250,27 @@ def main(
     silhouette_val = compute_silhouette_score(
         feature_matrix=dist_matrix, labels=cluster_labels
     )
+
+    plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}_sil_{silhoette}.png".format(
+            file_name=file_name,
+            airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
+            threshold=threshold,
+            algo=detect_entrance_algo,
+            n_entrance=estimated_n_entrance,
+            dr_range="{}_{}".format(min_dr, max_dr),
+            silhoette = silhouette_val
+
+        )
+
+    traffic_flight_plot(
+        flight_ids=flight_df['idx'].tolist(),
+        clusters=cluster_labels,
+        flight_dicts=flight_dicts,
+        file_path=plot_file_name,
+        group_clusters=reduced_groups,
+        info={'file_name': file_name, 'airport_code': airport_code}
+    )
+
     result_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}_sil_{silhoette}.png".format(
             file_name=file_name,
             airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
@@ -273,19 +298,24 @@ def main(
 @click.option(
     '--max_flights',
     type=int,
-    default=1000,
+    default=2000,
     help='Max number of flights')
 @click.option(
     '--airport_code',
     type=str,
-    default='WSSS,VTBS,VVTS',
+    default='WSSS,VTBS,WMKK',
     help='AirPort Codename')
 @click.option(
     '--dr_range',
     type=str,
-    default='0.5,3.0',
+    default='1.0,5.0',
     help='distance remains in radius')
-def main_cli(input_path, airport_code, max_flights, dr_range):
+@click.option(
+    '--filter_date',
+    type=str,
+    default='',
+    help='Filter by date example 2016-09-01')
+def main_cli(input_path, airport_code, max_flights, dr_range, filter_date):
     airports = airport_code.split(",")
     dr_ranges = [float(i) for i in dr_range.split(",")]
     for airport in airports:
@@ -297,7 +327,8 @@ def main_cli(input_path, airport_code, max_flights, dr_range):
             threshold=0.5,
             algo='k-means',
             min_dr=dr_ranges[0],
-            max_dr=dr_ranges[1]
+            max_dr=dr_ranges[1],
+            filter_date=filter_date
         )
 
 

@@ -74,9 +74,6 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
         max_dr=max_dr
     )
 
-    if max_flights <= len(flights_to_airport):
-        max_flights = len(flights_to_airport)
-
 
     logger.info("Encoding flight ID ...")
     flight_ids = flights_to_airport['Flight_ID'].unique().tolist()
