@@ -52,7 +52,7 @@ def main(input_path, airport_code, date):
 @click.option(
     '--airport_code',
     type=str,
-    default='WSSS,VTBS,VVTS',
+    default='WSSS,VTBS,WMKK',
     help='Air Port Codename')
 @click.option(
     '--date',

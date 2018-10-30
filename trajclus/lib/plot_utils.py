@@ -28,12 +28,16 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
     ymax = max(lat)
 
     plt.figure(figsize=(20, 10))
-    fig = plt.figure(frameon=False) 
-    fig.set_size_inches(20,20)
-
+    fig = plt.figure(frameon=False)
+    fig.set_size_inches(20, 20)
     # To make the content fill the whole figure
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
-    ax.set_axis_off()
+    # ax = plt.Axes(fig, [0., 0., 1., 1.])
+    # ax = plt.Axes(fig, [0.05, 0.05, 0.95, 0.95])
+    # fig.add_axes(ax)
+    ax = fig.add_subplot(1, 1, 1)
+
+    # And a corresponding grid
+    # ax.grid(which='both')
 
     # Set a single t value to slice the multidimensional array.
     length_cutoff = length_cutoff-100
@@ -44,22 +48,22 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
     # Remove the nans from the array
     x1 = x1[~np.isnan(x1)]
     y1 = y1[~np.isnan(y1)]
-    plt.title(file_path.split("/")[-1], fontsize=30)
-    plt.xlabel('Longitude', fontsize=20)
-    plt.ylabel('Latitude', fontsize=20)
+    # plt.title(file_path.split("/")[-1].split(".")[0], fontsize=30)
+    plt.xlabel('Longitude', fontsize=30)
+    plt.ylabel('Latitude', fontsize=30)
     # Log colormap
     hb = ax.hexbin(
         x1,
         y1,
-        gridsize=500,
+        gridsize=400,
         bins='log',
         cmap='inferno',
         extent=(xmin, xmax, ymin, ymax)
     )
 
     fig.add_axes(ax)
-    ax.axis('equal')
-    # plt.axis('on')
+    # ax.axis('equal')
+    plt.axis('on')
     # Setting the axes like this avoid the zero values in
     # the preallocated empty array.
     ax.axis([xmin, xmax, ymin, ymax])
@@ -104,12 +108,16 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
     plt.figure(figsize=(20, 10))
     fig = plt.figure(frameon=False)
     fig.set_size_inches(20, 20)
+    # To make the content fill the whole figure
+    # ax = plt.Axes(fig, [0.05, 0.05, 0.95, 0.95])
+    # fig.add_axes(ax)
     ax = fig.add_subplot(1, 1, 1)
+
     # And a corresponding grid
     ax.grid(which='both')
     # Or if you want different settings for the grids:
     ax.grid(which='minor', alpha=0.2)
-    ax.grid(which='major', alpha=0.9)
+    ax.grid(which='major', alpha=0.5)
 
     for index, code in enumerate(flight_ids):
         if clusters[index] == 0:
@@ -121,8 +129,8 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
         color = colors_dict[label]
         plt.title("{} {}".format(info['airport_code'], info['file_name']),
                   fontsize=30)
-        plt.xlabel('Longitude', fontsize=20)
-        plt.ylabel('Latitude', fontsize=20)
+        plt.xlabel('Longitude', fontsize=30)
+        plt.ylabel('Latitude', fontsize=30)
         plt.plot(x, y, '-ok', color=color,
                  markersize=1, linewidth=2,
                  markerfacecolor='white',

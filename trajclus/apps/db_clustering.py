@@ -10,8 +10,8 @@ from trajclus.lib.common_utils import gen_log_file
 from trajclus.lib.preprocessing_lib import filter_by_airport, flight_id_encoder, \
     build_flight_trajectory_df
 from trajclus.lib.plot_utils import traffic_flight_plot
-from trajclus.lib.geometric_utils import build_matrix_distances, KM_PER_RADIAN
-
+from trajclus.lib.geometric_utils import build_matrix_distances, KM_PER_RADIAN, \
+    simplify_coordinator
 
 logger = gen_log_file(path_to_file='../tmp/db_clustering.log')
 
@@ -51,14 +51,14 @@ def cluster_trajectories(dist_matrix, epsilon=1, min_samples=1):
     )
 
     logger.info(
-        'Number of clusters: {} with Silhouette Coefficient {}'.format(
+        'Number of trajectory clusters via DBSCAN: {} with Silhouette Coefficient {}'.format(
             num_clusters, silhouette_val
         )
     )
     return clusters, labels, silhouette_val
 
 
-def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, max_dr):
+def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, max_dr, epsilon=0.001):
     history = strftime("%Y-%m-%d %H:%M:%S", gmtime()).replace(" ", "_")
     logger.info("=============================================")
     logger.info("================ DATETIME {} ================".format(history))
@@ -70,7 +70,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
     flights_to_airport = filter_by_airport(
         df=df,
         airport_code=airport_code,
-        min_dr=0.1,
+        min_dr=min_dr,
         max_dr=max_dr
     )
 
@@ -86,7 +86,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
         label_encoder=flight_encoder,
         flight_ids=flight_ids,
         max_flights=max_flights,
-        epsilon=0.0001
+        epsilon=epsilon
     )
 
     # prepare data-frame for detect entrance points toward the airport
@@ -101,6 +101,10 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
         tmp_df = entrance_to_airport[entrance_to_airport['Flight_ID'] == fid]
         tmp_df = tmp_df.sort_values(by='DRemains', ascending=False)
         entrance_trajectories.append(tmp_df[['Latitude', 'Longitude']].values)
+    simplified_coords = [
+        simplify_coordinator(coord_curve=curve, epsilon=epsilon)
+        for curve in entrance_trajectories
+    ]
 
     # create data-frame result
     clusters_df = pd.DataFrame()
@@ -108,7 +112,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
 
     logger.info("Building distance matrix - {} ...".format(distance))
     dist_matrix = build_matrix_distances(
-        coords=entrance_trajectories,
+        coords=simplified_coords,
         dist_type=distance
     )
 
@@ -121,8 +125,9 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
         "upper_bound {}, lower_bound {}, step {}".format(
             upper_bound, lower_bound, step)
     )
-    eps_list = np.arange(step*2, step*5, step)
-    # eps_list =[max_km / KM_PER_RADIAN for max_km in [5, 10, 15, 20]]
+    # eps_list = np.arange(step*1, step*5, step)
+    eps_list =[max_km / KM_PER_RADIAN /10.0 for max_km in [5, 10, 15, 20]]
+    print(eps_list)
 
     last_clusters = None
     # for min_sp in range(1, min_sample, 1):
@@ -152,7 +157,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
             file_path=result_file_name,
             info={'file_name': file_name, 'airport_code': airport_code}
         )
-        if len(last_clusters) < 2:
+        if len(last_clusters) <= 2:
             break
 
     # export result
@@ -174,7 +179,7 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
 @click.option(
     '--airport_code',
     type=str,
-    default='WSSS,VTBS,VVTS',
+    default='WSSS,VTBS,WMKK',
     help='Air Port Codename')
 @click.option(
     '--max_flights',
@@ -189,14 +194,19 @@ def main(input_path, airport_code, distance, min_sample, max_flights, min_dr, ma
 @click.option(
     '--min_sample',
     type=int,
-    default=2,
+    default=1,
     help='Min sample value in DBSCAN')
 @click.option(
     '--dr_range',
     type=str,
-    default='0.5,3.0',
+    default='1.0,5.0',
     help='distance remains in radius')
-def main_cli(input_path, airport_code, distance, min_sample, max_flights, dr_range):
+@click.option(
+    '--epsilon',
+    type=float,
+    default=0.0001,
+    help='epsilon for simplify curve using Douglas Peucker')
+def main_cli(input_path, airport_code, distance, min_sample, max_flights, dr_range, epsilon):
     airports = airport_code.split(",")
     dr_ranges = [float(i) for i in dr_range.split(",")]
     for airport in airports:
@@ -207,7 +217,9 @@ def main_cli(input_path, airport_code, distance, min_sample, max_flights, dr_ran
             min_sample=min_sample,
             max_flights=max_flights,
             min_dr=dr_ranges[0],
-            max_dr=dr_ranges[1]
+            max_dr=dr_ranges[1],
+            epsilon=epsilon
+
         )
 
 

@@ -120,7 +120,7 @@ def main(
         epsilon=0.001
 ):
     # load raw-data from csv
-    logger = gen_log_file(path_to_file='../tmp/lsh_clustering_{}.log'.format(airport_code))
+    logger = gen_log_file(path_to_file='../tmp/lsh_clustering_{}.log'.format(filter_date))
     df = pd.read_csv(input_path)
     file_name = input_path.split("/")[-1].replace(".csv", "")
 
@@ -148,7 +148,7 @@ def main(
         max_dr=max_dr
     )
 
-    logger.info("Encoding flight ID ...")
+    logger.info("Encoding flight ID ... %s" % airport_code)
     flight_ids = flights_to_airport['Flight_ID'].unique().tolist()
     logger.info("Total # flight ID {}".format(len(flight_ids)))
     flight_encoder = flight_id_encoder(flight_ids)
@@ -162,15 +162,19 @@ def main(
     )
 
     entrance_trajectories = []
+    total_original_points = 0
     for fid in flight_ids[:max_flights]:
         tmp_df = entrance_to_airport[entrance_to_airport['Flight_ID'] == fid]
         tmp_df = tmp_df.sort_values(by='DRemains', ascending=False)
-        entrance_trajectories.append(tmp_df[['Latitude', 'Longitude']].values)
+        lat_lon_values = tmp_df[['Latitude', 'Longitude']].values
+        total_original_points += len(lat_lon_values)
+        entrance_trajectories.append(lat_lon_values)
 
     simplified_coords = [simplify_coordinator(coord_curve=curve, epsilon=epsilon)
                          for curve in entrance_trajectories
                          ]
 
+    logger.info("Total original points at entrance %s" % total_original_points)
     point_coords = simplified_coords[0]
     for item in simplified_coords[1:]:
         point_coords = np.concatenate((point_coords, item))
@@ -225,7 +229,7 @@ def main(
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
     def convert_to_cluster_number(bucket_label, unique_buckets, total_buckets, n_curve_per_bucket=None):
-        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 1.0:
+        if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 5.0:
             return -1
         return unique_buckets.index(bucket_label)
 
@@ -251,6 +255,31 @@ def main(
     silhouette_val = compute_silhouette_score(
         feature_matrix=dist_matrix, labels=cluster_labels
     )
+    logger.info("Silhouette Coefficient via LSH %s" % silhouette_val)
+
+    # ### base-line with DBSCAN
+    # from db_clustering import cluster_trajectories
+    # alpha = 0.001
+    # upper_bound = max(dist_matrix[0, :])
+    # lower_bound = min(dist_matrix[0, :])
+    # step = (upper_bound - lower_bound) * alpha
+    # logger.info(
+    #     "upper_bound {}, lower_bound {}, step {}".format(
+    #         upper_bound, lower_bound, step)
+    # )
+    # eps_list = np.arange(step*1, step*5, step)
+    # for eps in eps_list:
+    #     try:
+    #         clusters, labels, silhouette = cluster_trajectories(
+    #             dist_matrix=dist_matrix,
+    #             epsilon=eps,
+    #             min_samples=1
+    #         )
+    #     except:
+    #         continue
+
+
+
 
     plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}_sil_{silhoette}.png".format(
             file_name=file_name,
@@ -304,7 +333,8 @@ def main(
 @click.option(
     '--airport_code',
     type=str,
-    default='WSSS,VTBS,WMKK',
+    # default='WSSS,VTBS,WMKK',
+    default='WSSS',
     help='AirPort Codename')
 @click.option(
     '--dr_range',
@@ -320,7 +350,7 @@ def main(
     '--epsilon',
     type=float,
     default=0.001,
-    help='epsilon for simplified curve using Douglas Peucker')
+    help='epsilon for simplify curve using Douglas Peucker')
 def main_cli(input_path, airport_code, max_flights, dr_range, filter_date, epsilon):
     airports = airport_code.split(",")
     dr_ranges = [float(i) for i in dr_range.split(",")]
