@@ -101,7 +101,7 @@ def traffic_flight_plot(
     for idx, uni in enumerate(unique_labels):
         colors_dict[uni] = colors[idx]
 
-    # plt.style.use('dark_background')
+    plt.style.use('dark_background')
     fig = plt.figure(frameon=False)
     fig.set_size_inches(20, 20)
     # To make the content fill the whole figure
