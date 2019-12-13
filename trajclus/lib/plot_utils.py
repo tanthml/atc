@@ -1,9 +1,7 @@
-import os
-
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import seaborn as sns
+sns.set()
 import matplotlib.pyplot as plt
 
 
@@ -14,9 +12,7 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
     Args:
         lat (list[float]):
         lon (list[float]):
-        directory (str):
         length_cutoff (int):
-        subfix (str):
 
     Returns:
 
@@ -27,7 +23,6 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
     ymin = min(lat)
     ymax = max(lat)
 
-    plt.figure(figsize=(20, 10))
     fig = plt.figure(frameon=False)
     fig.set_size_inches(20, 20)
     # To make the content fill the whole figure
@@ -49,13 +44,13 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
     x1 = x1[~np.isnan(x1)]
     y1 = y1[~np.isnan(y1)]
     # plt.title(file_path.split("/")[-1].split(".")[0], fontsize=30)
-    plt.xlabel('Longitude', fontsize=30)
-    plt.ylabel('Latitude', fontsize=30)
+    plt.xlabel('Longitude', fontsize=24)
+    plt.ylabel('Latitude', fontsize=24)
     # Log colormap
     hb = ax.hexbin(
         x1,
         y1,
-        gridsize=400,
+        gridsize=1000,
         bins='log',
         cmap='inferno',
         extent=(xmin, xmax, ymin, ymax)
@@ -77,19 +72,20 @@ def traffic_density_plot(lat=[], lon=[], file_path=None, length_cutoff=600):
         # if not os.path.exists(directory):
         #     os.makedirs(directory)
         # # png1 = BytesIO()
-        fig.savefig(file_path, format='png', bbox_inches='tight', pad_inches=0)
+        fig.savefig(file_path, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
         return 1
 
 
-def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clusters=None, info={}):
+def traffic_flight_plot(
+        flight_ids, clusters, flight_dicts, file_path, group_clusters, info={}):
     """
     visualization of clustering result
     Args:
-        flight_ids:
-        clusters:
-        unique_labels:
-        flight_dicts:
-        file_path:
+        flight_ids (list[str]):
+        clusters (list[]):
+        flight_dicts: (dict)
+        group_clusters list[Any]:
+        file_path (str):
 
     Returns:
 
@@ -105,19 +101,20 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
     for idx, uni in enumerate(unique_labels):
         colors_dict[uni] = colors[idx]
 
-    plt.figure(figsize=(20, 10))
+    # plt.style.use('dark_background')
     fig = plt.figure(frameon=False)
     fig.set_size_inches(20, 20)
     # To make the content fill the whole figure
-    # ax = plt.Axes(fig, [0.05, 0.05, 0.95, 0.95])
+    ax = plt.Axes(fig, [0.05, 0.05, 0.95, 0.95])
     # fig.add_axes(ax)
     ax = fig.add_subplot(1, 1, 1)
+    # ax.set_facecolor("grey")
 
     # And a corresponding grid
-    ax.grid(which='both')
+    ax.grid(False)
     # Or if you want different settings for the grids:
-    ax.grid(which='minor', alpha=0.2)
-    ax.grid(which='major', alpha=0.5)
+    # ax.grid(which='minor', alpha=0.2)
+    # ax.grid(which='major', alpha=0.5)
 
     for index, code in enumerate(flight_ids):
         if clusters[index] == 0:
@@ -128,42 +125,19 @@ def traffic_flight_plot(flight_ids, clusters, flight_dicts, file_path, group_clu
         label = clusters[index]
         color = colors_dict[label]
         plt.title("{} {}".format(info['airport_code'], info['file_name']),
-                  fontsize=30)
-        plt.xlabel('Longitude', fontsize=30)
-        plt.ylabel('Latitude', fontsize=30)
+                  fontsize=24)
+        plt.xlabel('Longitude', fontsize=24)
+        plt.ylabel('Latitude', fontsize=24)
         plt.plot(x, y, '-ok', color=color,
-                 markersize=1, linewidth=2,
+                 markersize=0, linewidth=1,
                  markerfacecolor='white',
                  markeredgecolor='gray',
                  markeredgewidth=1)
-        # ax.scatter(
-        #     x=x,  # x axis
-        #     y=y,  # y axis
-        #     alpha=0.9,
-        #     label=label,
-        #     color=color,
-        #     cmap=plt.cm.jet,
-        #     s=10,
-        # )
     plt.legend()
-    # if 'lsh' in file_path:
-    #     centermost_points_plot(ax=ax, group_clusters=group_clusters)
-    # export images
+
     plt.savefig(
         "../tmp/{file_path}".format(
             file_path=file_path
-        )
-    )
-
-def centermost_points_plot(ax, group_clusters):
-
-
-    lons = group_clusters[:, 1]
-    lats = group_clusters[:, 0]
-    # lats, lons = zip(*group_clusters)
-    ax.scatter(
-        x=lons,  # x axis
-        y=lats,  # y axis
-        cmap=plt.cm.jet,
-        c='#99cc99', edgecolor='None', alpha=0.5, s=160
+        ),
+        dpi=300
     )

@@ -1,6 +1,6 @@
 import numpy as np
-import traj_dist.distance as tdist
-from simplification.cutil import simplify_coords, simplify_coords_vw
+from scipy.spatial import distance
+from simplification.cutil import simplify_coords
 
 
 KM_PER_RADIAN = 6371.0088
@@ -22,15 +22,16 @@ def simplify_coordinator(coord_curve, epsilon=0.0001):
 def build_coordinator_dict(df, label_encoder, flight_ids, max_flights=1000,
                            is_simplify=True):
     """
-
+    Extract trajectories and store to dictionary with key is flight id
     Args:
-        df:
-        label_encoder:
-        flight_ids:
-        max_flights:
+        df (pandas.DataFrame):
+        label_encoder ():
+        flight_ids (list[str]):
+        max_flights (int):
+        is_simplify (bool):
 
     Returns:
-
+        (list[str], list[list[float, float]], (dict)):
     """
     flight_idx = []
     flight_dicts = {}
@@ -64,18 +65,19 @@ def compute_distance_between_curves(u, v, algo='directed_hausdorff'):
     Returns:
 
     """
-    if algo == 'frechet':
-        return tdist.frechet(u, v)
-    else:
+    if algo == 'directed_hausdorff':
         """ compute symmetric Hausdorff distances of curves """
-        # D = scipy.spatial.distance.cdist(u, v, 'euclidean')
+        D = distance.cdist(u, v, 'euclidean')
         # None symmetric Hausdorff distances
-        # H1 = np.max(np.min(D, axis=1))
-        # H2 = np.max(np.min(D, axis=0))
-        # return (H1 + H2) / 2.
+        H1 = np.max(np.min(D, axis=1))
+        H2 = np.max(np.min(D, axis=0))
+        return (H1 + H2) / 2.
+        # import traj_dist.distance as tdist
         # Find the general (symmetric) Hausdorff distance between two 2-D arrays of coordinates:
         # return max(directed_hausdorff(u, v)[0], directed_hausdorff(v, u)[0])
-        return tdist.hausdorff(u, v)
+        # return tdist.hausdorff(u, v)
+    else:
+        raise (" Do not support %s" % algo)
 
 
 def build_matrix_distances(coords=[], dist_type='directed_hausdorff'):
@@ -90,7 +92,7 @@ def build_matrix_distances(coords=[], dist_type='directed_hausdorff'):
         (numpy-array): matrix distance
 
     """
-    if dist_type not in ['directed_hausdorff', 'frechet']:
+    if dist_type not in ['directed_hausdorff']:
         return False
     n_curve = len(coords)
     # compute distance matrix

@@ -95,11 +95,11 @@ def filter_by_date(datetime, filter_date):
     """
     Filter date
     Args:
-        datetime:
-        filter_date:
+        datetime (str): yyyy-mm-dd format
+        filter_date (str): yyyy-mm-dd format
 
     Returns:
-
+        (bool)
     """
     str_date = str(datetime).split(' ')[0]
     if str_date == str(filter_date):
@@ -130,6 +130,7 @@ def main(
             lambda x: filter_by_date(datetime=x, filter_date=filter_date)
         )
         df = df[df['filtered']]
+        file_name = filter_date
         print("after filtering %s" % len(df))
 
     # filter data by airport code-name
@@ -170,9 +171,10 @@ def main(
         total_original_points += len(lat_lon_values)
         entrance_trajectories.append(lat_lon_values)
 
-    simplified_coords = [simplify_coordinator(coord_curve=curve, epsilon=epsilon)
-                         for curve in entrance_trajectories
-                         ]
+    simplified_coords = [
+        simplify_coordinator(coord_curve=curve, epsilon=epsilon)
+        for curve in entrance_trajectories
+    ]
 
     logger.info("Total original points at entrance %s" % total_original_points)
     point_coords = simplified_coords[0]
@@ -186,7 +188,6 @@ def main(
         algorithm=detect_entrance_algo,
         estimated_n_entrance=estimated_n_entrance
     )
-
 
     # we trick each group label as a term, then each trajectory will contains
     # list of terms/tokens
@@ -228,7 +229,9 @@ def main(
     logger.info(len(flight_df.groupby('buckets').size()))
     n_curve_per_bucket = flight_df.groupby('buckets').size().to_dict()
 
-    def convert_to_cluster_number(bucket_label, unique_buckets, total_buckets, n_curve_per_bucket=None):
+    def convert_to_cluster_number(
+            bucket_label, unique_buckets, total_buckets, n_curve_per_bucket=None):
+        # less number in bucket will be consider as outliers , label = -1
         if (n_curve_per_bucket[bucket_label] * 100.0 / total_buckets) <= 5.0:
             return -1
         return unique_buckets.index(bucket_label)
@@ -278,9 +281,6 @@ def main(
     #     except:
     #         continue
 
-
-
-
     plot_file_name = "{file_name}_{airport_code}_lsh_{threshold}_{algo}_{n_entrance}_dr_{dr_range}_sil_{silhoette}.png".format(
             file_name=file_name,
             airport_code="{}_{}_flights".format(airport_code, len(flight_df)),
@@ -311,7 +311,10 @@ def main(
             silhoette=silhouette_val
 
         )
-    flight_df[['flight_id', 'buckets', 'cluster']].to_csv("../tmp/{}.csv".format(result_file_name), index=False)
+    # export flight id with label of clusters to csv file
+    flight_df[
+        ['flight_id', 'buckets', 'cluster']
+    ].to_csv("../tmp/{}.csv".format(result_file_name), index=False)
 
 
 @click.command()
@@ -323,19 +326,14 @@ def main(
 @click.option(
     '--airport_code',
     type=str,
+    # default='WSSS,VTBS,WMKK',
     default='WSSS',
     help='Air Port Codename')
 @click.option(
     '--max_flights',
     type=int,
-    default=2000,
+    default=1000,
     help='Max number of flights')
-@click.option(
-    '--airport_code',
-    type=str,
-    # default='WSSS,VTBS,WMKK',
-    default='WSSS',
-    help='AirPort Codename')
 @click.option(
     '--dr_range',
     type=str,
@@ -345,7 +343,7 @@ def main(
     '--filter_date',
     type=str,
     default='',
-    help='Filter by date example 2016-09-01')
+    help='Filter by date example 2016-09-29')
 @click.option(
     '--epsilon',
     type=float,

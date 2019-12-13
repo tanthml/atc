@@ -64,10 +64,11 @@ def build_flight_trajectory_df(flights_to_airport, label_encoder, flight_ids,
         encode_id = label_encoder.transform([fid])[0]
         encoded_idx.append(encode_id)
         coords = df_min[['Latitude', 'Longitude']].values
+        flight_dicts[encode_id] = coords
         if epsilon:
             coords = simplify_coordinator(coords, epsilon=epsilon)
         trajectories.append(coords)
-        flight_dicts[encode_id] = coords
+
 
     flight_df = pd.DataFrame()
     flight_df['idx'] = encoded_idx
